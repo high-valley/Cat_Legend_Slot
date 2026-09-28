@@ -232,7 +232,7 @@ export default function BattleScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Animated.View style={{ transform: [{ translateX: shakeX }] }}>
+      <Animated.View style={[styles.body, { transform: [{ translateX: shakeX }] }]}>
         <View style={styles.topbar}>
           <Pressable style={styles.smallBtn} onPress={() => router.back()}>
             <Text style={styles.smallBtnText}>編成へ</Text>
@@ -279,7 +279,7 @@ export default function BattleScreen() {
         <View style={styles.legend}>
           {LEGEND.map((l) => (
             <View key={l.sym} style={styles.legendItem}>
-              <SymbolIcon sym={l.sym} size={24} />
+              <SymbolIcon sym={l.sym} size={18} />
               <Text style={styles.legendText}>{l.label}</Text>
             </View>
           ))}
@@ -324,7 +324,8 @@ export default function BattleScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.night },
-  content: { padding: 14, gap: 12 },
+  content: { padding: 12 },
+  body: { gap: 8 },
   topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   smallBtn: {
     borderWidth: 1.5,
@@ -339,12 +340,12 @@ const styles = StyleSheet.create({
   reelBox: {
     backgroundColor: '#0A0C1C',
     borderRadius: 14,
-    padding: 10,
+    padding: 8,
     borderWidth: 2,
     borderColor: colors.goldDeep,
   },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  legendText: { color: colors.muted, fontSize: 11, fontWeight: '700' },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  legendText: { color: colors.muted, fontSize: 10, fontWeight: '700' },
   stops: { flexDirection: 'row', gap: 8 },
 });

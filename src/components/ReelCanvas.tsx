@@ -22,7 +22,7 @@ export function ReelCanvas({ reels, activeFlag, winLive, pulse }: ReelCanvasProp
     const w = e.nativeEvent.layout.width;
     if (w <= 0) return;
     const rw = (w - 8 * 2) / 3;
-    const rh = Math.round(rw * 0.7);
+    const rh = Math.round(rw * 0.6);
     setSize({ w, h: rh * 3 });
   };
 

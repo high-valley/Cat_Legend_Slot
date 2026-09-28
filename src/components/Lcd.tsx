@@ -119,7 +119,7 @@ export function Lcd({
 
 const styles = StyleSheet.create({
   lcd: {
-    aspectRatio: 16 / 11,
+    aspectRatio: 2,
     width: '100%',
     backgroundColor: colors.lcd,
     borderRadius: 12,

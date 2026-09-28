@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { CharacterDef } from '../game/characters';
 import { CatPortrait } from './CatPortrait';
 import { colors } from './theme';
+import { instantPressProps } from './instantPress';
 
 export interface StopButtonProps {
   character: CharacterDef;
@@ -15,6 +16,7 @@ export interface StopButtonProps {
 export function StopButton({ character, isLeader, live, onPress }: StopButtonProps) {
   return (
     <Pressable
+      {...instantPressProps}
       onPressIn={onPress}
       style={({ pressed }) => [styles.btn, live && styles.live, pressed && styles.pressed]}
     >
