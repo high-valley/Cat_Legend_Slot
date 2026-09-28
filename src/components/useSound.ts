@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { SfxName } from '../game/sound';
 
 const SOUND_FILES: Record<SfxName, number> = {
@@ -14,39 +14,35 @@ const SOUND_FILES: Record<SfxName, number> = {
 };
 
 /**
- * 効果音の再生。同時再生に対応するため、鳴らすたびに新しい Sound を作り、
- * 再生完了後に解放する。ミュート中は再生自体をスキップする。
+ * 効果音の再生。効果音ごとにプレイヤーを事前に作っておき、
+ * 鳴らすたびに先頭へ戻して再生する（停止音の遅延を減らすため）。
  */
 export function useSound() {
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const soundsRef = useRef<Audio.Sound[]>([]);
+  const playersRef = useRef<Partial<Record<SfxName, AudioPlayer>>>({});
 
   useEffect(() => {
-    Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => {});
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+    const players: Partial<Record<SfxName, AudioPlayer>> = {};
+    (Object.keys(SOUND_FILES) as SfxName[]).forEach((name) => {
+      const player = createAudioPlayer(SOUND_FILES[name]);
+      player.volume = 0.7;
+      players[name] = player;
+    });
+    playersRef.current = players;
     return () => {
-      soundsRef.current.forEach((s) => {
-        s.unloadAsync().catch(() => {});
-      });
-      soundsRef.current = [];
+      Object.values(players).forEach((p) => p?.remove());
+      playersRef.current = {};
     };
   }, []);
 
   const play = useCallback((name: SfxName) => {
     if (mutedRef.current) return;
-    Audio.Sound.createAsync(SOUND_FILES[name], { shouldPlay: true, volume: 0.7 })
-      .then(({ sound }) => {
-        soundsRef.current.push(sound);
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if ('didJustFinish' in status && status.didJustFinish) {
-            sound.unloadAsync().catch(() => {});
-            soundsRef.current = soundsRef.current.filter((s) => s !== sound);
-          }
-        });
-      })
-      .catch(() => {
-        // 実機で音声デバイスが使えない場合などは無視する
-      });
+    const player = playersRef.current[name];
+    if (!player) return;
+    player.seekTo(0).catch(() => {});
+    player.play();
   }, []);
 
   const toggleMuted = useCallback(() => {
