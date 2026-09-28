@@ -26,6 +26,8 @@
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^57.0.13",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
     "jest": "^30.5.2",
     "jest-expo": "^57.0.5",
     "typescript": "~6.0.3"
@@ -36,7 +38,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "expo lint"
   },
   "private": true
 }

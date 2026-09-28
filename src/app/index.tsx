@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CHARACTERS, CharacterId, getCharacter } from '../game/characters';
+import { CHARACTERS, getCharacter } from '../game/characters';
 import { SYMBOLS } from '../game/constants';
 import { usePartyStore } from '../store/partyStore';
 import { CatPortrait } from '../components/CatPortrait';

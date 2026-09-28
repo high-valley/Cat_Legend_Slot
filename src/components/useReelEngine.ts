@@ -20,9 +20,26 @@ export interface ReelVisual {
   bounce: number;
 }
 
-function randomStartPos() {
-  return Math.floor(Math.random() * 20) + 200;
+interface Frame {
+  reels: ReelVisual[];
+  /** このフレームの時刻（ms）。告知中の脈動演出に使う */
+  now: number;
 }
+
+function createInitialReels(): ReelVisual[] {
+  return [0, 1, 2].map(() => ({
+    phase: 'stop',
+    pos: Math.floor(Math.random() * 20) + 200,
+    targetTopIndex: 0,
+    startT: 0,
+    bounce: 0,
+  }));
+}
+
+const snapshot = (reels: ReelVisual[], now: number): Frame => ({
+  reels: reels.map((r) => ({ ...r })),
+  now,
+});
 
 export interface UseReelEngineParams {
   /** リール1〜3の速度（1秒あたりのコマ数、リーダースキル適用後） */
@@ -32,38 +49,40 @@ export interface UseReelEngineParams {
   onReelStopSound?: () => void;
 }
 
+/**
+ * リールの回転・停止をフレーム単位で進める。
+ * 物理状態は ref で更新し、描画にはフレームごとのコピー（state）を渡す。
+ */
 export function useReelEngine({
   reelSpeeds,
   socrLeader,
   onAllStopped,
   onReelStopSound,
 }: UseReelEngineParams) {
-  const [, forceRender] = useState(0);
-  const reelsRef = useRef<ReelVisual[]>([0, 1, 2].map(() => ({
-    phase: 'stop',
-    pos: randomStartPos(),
-    targetTopIndex: 0,
-    startT: 0,
-    bounce: 0,
-  })));
+  const [frame, setFrame] = useState<Frame>(() => ({ reels: createInitialReels(), now: 0 }));
+  const reelsRef = useRef<ReelVisual[]>(frame.reels.map((r) => ({ ...r })));
   const flagRef = useRef<Flag | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const lastRef = useRef<number>(0);
   const resolvedRef = useRef(false);
+  const speedsRef = useRef(reelSpeeds);
   const onAllStoppedRef = useRef(onAllStopped);
-  onAllStoppedRef.current = onAllStopped;
   const onReelStopSoundRef = useRef(onReelStopSound);
-  onReelStopSoundRef.current = onReelStopSound;
 
-  const isSpinning = () => reelsRef.current.some((r) => r.phase !== 'stop');
+  useEffect(() => {
+    speedsRef.current = reelSpeeds;
+    onAllStoppedRef.current = onAllStopped;
+    onReelStopSoundRef.current = onReelStopSound;
+  });
 
   const lever = useCallback((flag: Flag) => {
-    if (isSpinning()) return;
+    if (reelsRef.current.some((r) => r.phase !== 'stop')) return;
     flagRef.current = flag;
     resolvedRef.current = false;
     const now = performance.now();
-    reelsRef.current = reelsRef.current.map((r) => ({ ...r, phase: 'accel', startT: now }));
-    forceRender((n) => n + 1);
+    reelsRef.current.forEach((r) => {
+      r.phase = 'accel';
+      r.startT = now;
+    });
+    setFrame(snapshot(reelsRef.current, now));
   }, []);
 
   const stopReel = useCallback(
@@ -71,40 +90,40 @@ export function useReelEngine({
       const flag = flagRef.current;
       if (!flag) return;
       const r = reelsRef.current[index];
+      const now = performance.now();
       if (r.phase !== 'spin') return;
-      if (performance.now() - r.startT < REEL_STOP_LOCK_MS) return;
+      if (now - r.startT < REEL_STOP_LOCK_MS) return;
 
-      const pressTopIndex = Math.floor(r.pos);
       const otherPlacedRows: PlacedRows = reelsRef.current.map((o, k) =>
         k !== index && (o.phase === 'stop' || o.phase === 'stopping')
           ? rowsAt(k, o.targetTopIndex)
           : null,
       );
-      const alreadyStopped = otherPlacedRows.filter(Boolean).length;
-      const isLastReel = alreadyStopped === 2;
       const result = decideStop({
         reelIndex: index,
-        pressTopIndex,
+        pressTopIndex: Math.floor(r.pos),
         flag,
         otherPlacedRows,
-        isLastReel,
+        isLastReel: otherPlacedRows.filter(Boolean).length === 2,
         socrLeader,
       });
-      reelsRef.current[index] = { ...r, phase: 'stopping', targetTopIndex: result.finalTopIndex };
-      forceRender((n) => n + 1);
+      r.phase = 'stopping';
+      r.targetTopIndex = result.finalTopIndex;
+      setFrame(snapshot(reelsRef.current, now));
     },
     [socrLeader],
   );
 
   useEffect(() => {
-    lastRef.current = performance.now();
+    let raf = 0;
+    let last = performance.now();
     const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - lastRef.current) / 1000);
-      lastRef.current = now;
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
       let dirty = false;
       const rs = reelsRef.current;
       rs.forEach((r, i) => {
-        const maxSpeed = reelSpeeds[i];
+        const maxSpeed = speedsRef.current[i];
         if (r.phase === 'accel') {
           const t = Math.min(1, (now - r.startT) / REEL_ACCEL_MS);
           r.pos -= maxSpeed * t * dt;
@@ -140,24 +159,23 @@ export function useReelEngine({
         onAllStoppedRef.current(rows, flag);
       }
 
-      if (dirty) forceRender((n) => n + 1);
-      rafRef.current = requestAnimationFrame(tick);
+      if (dirty) setFrame(snapshot(rs, now));
+      raf = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reelSpeeds[0], reelSpeeds[1], reelSpeeds[2], socrLeader]);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const isReelLive = (index: number) => {
+    const phase = frame.reels[index].phase;
+    return phase === 'accel' || phase === 'spin';
+  };
 
   return {
-    reels: reelsRef.current,
+    reels: frame.reels,
+    frameTime: frame.now,
     lever,
     stopReel,
-    isSpinning: isSpinning(),
-    isReelLive: (index: number) => {
-      const phase = reelsRef.current[index].phase;
-      return phase === 'accel' || phase === 'spin';
-    },
+    isReelLive,
   };
 }

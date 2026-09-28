@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { CharacterId } from '../game/characters';
 import { CatPortrait, RatPortrait } from './CatPortrait';
@@ -39,9 +39,9 @@ export function Lcd({
   popups,
   cutin,
 }: LcdProps) {
-  const shakeX = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
+  const [shakeX] = useState(() => new Animated.Value(0));
+  const [scale] = useState(() => new Animated.Value(1));
+  const [opacity] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     if (enemyAnim === 'hit') {
@@ -61,7 +61,7 @@ export function Lcd({
       opacity.setValue(1);
       scale.setValue(1);
     }
-  }, [enemyAnim]);
+  }, [enemyAnim, shakeX, scale, opacity]);
 
   const pips = attackCount > 0 ? '●'.repeat(Math.max(0, attackCount)) + '○'.repeat(Math.max(0, attackInterval - attackCount)) : '!!';
 

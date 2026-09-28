@@ -19,8 +19,7 @@ const SOUND_FILES: Record<SfxName, number> = {
  */
 export function useSound() {
   const [muted, setMuted] = useState(false);
-  const mutedRef = useRef(muted);
-  mutedRef.current = muted;
+  const mutedRef = useRef(false);
   const soundsRef = useRef<Audio.Sound[]>([]);
 
   useEffect(() => {
@@ -50,7 +49,10 @@ export function useSound() {
       });
   }, []);
 
-  const toggleMuted = useCallback(() => setMuted((m) => !m), []);
+  const toggleMuted = useCallback(() => {
+    mutedRef.current = !mutedRef.current;
+    setMuted(mutedRef.current);
+  }, []);
 
   return { play, muted, toggleMuted };
 }

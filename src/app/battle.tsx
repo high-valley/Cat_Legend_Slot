@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -63,10 +63,12 @@ export default function BattleScreen() {
   const [displayPartyHp, setDisplayPartyHp] = useState(battleState.hp);
 
   const battleStateRef = useRef(battleState);
-  battleStateRef.current = battleState;
+  useEffect(() => {
+    battleStateRef.current = battleState;
+  }, [battleState]);
   const rngRef = useRef(Math.random);
   const popupIdRef = useRef(0);
-  const shakeX = useRef(new Animated.Value(0)).current;
+  const [shakeX] = useState(() => new Animated.Value(0));
   const sound = useSound();
 
   const pushPopup = (text: string, heal = false) => {
@@ -268,9 +270,9 @@ export default function BattleScreen() {
         <View style={styles.reelBox}>
           <ReelCanvas
             reels={reelEngine.reels}
-            activeFlag={flag}
+            activeFlag={phase === 'spin' ? flag : null}
             winLive={winLive}
-            pulse={0.7 + 0.3 * Math.sin(Date.now() / 90)}
+            pulse={0.7 + 0.3 * Math.sin(reelEngine.frameTime / 90)}
           />
         </View>
 
